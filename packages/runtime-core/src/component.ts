@@ -51,10 +51,8 @@ import {
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
-import {
-  currentRenderingInstance,
-  markAttrsAccessed
-} from './componentRenderUtils'
+import { markAttrsAccessed } from './componentRenderUtils'
+import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
 
 export type Data = Record<string, unknown>
@@ -510,6 +508,10 @@ export function validateComponentName(name: string, config: AppConfig) {
   }
 }
 
+export function isStatefulComponent(instance: ComponentInternalInstance) {
+  return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+}
+
 export let isInSSRComponentSetup = false
 
 export function setupComponent(
@@ -518,8 +520,8 @@ export function setupComponent(
 ) {
   isInSSRComponentSetup = isSSR
 
-  const { props, children, shapeFlag } = instance.vnode
-  const isStateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+  const { props, children } = instance.vnode
+  const isStateful = isStatefulComponent(instance)
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children)
 
@@ -648,6 +650,9 @@ type CompileFunction = (
 ) => InternalRenderFunction
 
 let compile: CompileFunction | undefined
+
+// dev only
+export const isRuntimeOnly = () => !compile
 
 /**
  * For runtime-dom to register the compiler.
