@@ -19,7 +19,7 @@ import {
 import { off, on, once } from './instanceEventEmitter'
 import { getCompatListeners } from './instanceListeners'
 import { shallowReadonly } from '@vue/reactivity'
-import { legacySlotProxyHandlers } from './component'
+import { legacySlotProxyHandlers } from './componentFunctional'
 import { compatH } from './renderFn'
 import { createCommentVNode, createTextVNode } from '../vnode'
 import { renderList } from '../helpers/renderList'
@@ -36,7 +36,7 @@ import {
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
 import { resolveMergedOptions } from '../componentOptions'
-import { Slots } from '../componentSlots'
+import { InternalSlots, Slots } from '../componentSlots'
 
 export type LegacyPublicInstance = ComponentPublicInstance &
   LegacyPublicProperties
@@ -103,7 +103,14 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
 
     $scopedSlots: i => {
       assertCompatEnabled(DeprecationTypes.INSTANCE_SCOPED_SLOTS, i)
-      return __DEV__ ? shallowReadonly(i.slots) : i.slots
+      const res: InternalSlots = {}
+      for (const key in i.slots) {
+        const fn = i.slots[key]!
+        if (!(fn as any)._nonScoped) {
+          res[key] = fn
+        }
+      }
+      return res
     },
 
     $on: i => on.bind(null, i),
@@ -114,11 +121,14 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $listeners: getCompatListeners
   } as PublicPropertiesMap)
 
+  /* istanbul ignore if */
   if (isCompatEnabled(DeprecationTypes.PRIVATE_APIS, null)) {
     extend(map, {
+      // needed by many libs / render fns
       $vnode: i => i.vnode,
 
       // inject addtional properties into $options for compat
+      // e.g. vuex needs this.$options.parent
       $options: i => {
         let res = resolveMergedOptions(i)
         if (res === i.type) res = i.type.__merged = extend({}, res)
@@ -127,10 +137,15 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
         return res
       },
 
-      // v2 render helpers
-      $createElement: () => compatH,
+      // some private properties that are likely accessed...
       _self: i => i.proxy,
       _uid: i => i.uid,
+      _data: i => i.data,
+      _isMounted: i => i.isMounted,
+      _isDestroyed: i => i.isUnmounted,
+
+      // v2 render helpers
+      $createElement: () => compatH,
       _c: () => compatH,
       _o: () => legacyMarkOnce,
       _n: () => toNumber,

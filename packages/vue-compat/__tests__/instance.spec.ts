@@ -1,12 +1,12 @@
 import Vue from '@vue/compat'
-import { Slots } from '../../componentSlots'
-import { Text } from '../../vnode'
+import { Slots } from '../../runtime-core/src/componentSlots'
+import { Text } from '../../runtime-core/src/vnode'
 import {
   DeprecationTypes,
   deprecationData,
   toggleDeprecationWarning
-} from '../compatConfig'
-import { LegacyPublicInstance } from '../instance'
+} from '../../runtime-core/src/compat/compatConfig'
+import { LegacyPublicInstance } from '../../runtime-core/src/compat/instance'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)
@@ -251,30 +251,56 @@ test('INSTANCE_LISTENERS', () => {
   ).toHaveBeenWarned()
 })
 
-test('INSTANCE_SCOPED_SLOTS', () => {
-  let slots: Slots
-  new Vue({
-    template: `<child v-slot="{ msg }">{{ msg }}</child>`,
-    components: {
-      child: {
-        compatConfig: { RENDER_FUNCTION: false },
-        render() {
-          slots = this.$scopedSlots
+describe('INSTANCE_SCOPED_SLOTS', () => {
+  test('explicit usage', () => {
+    let slots: Slots
+    new Vue({
+      template: `<child v-slot="{ msg }">{{ msg }}</child>`,
+      components: {
+        child: {
+          compatConfig: { RENDER_FUNCTION: false },
+          render() {
+            slots = this.$scopedSlots
+          }
         }
       }
-    }
-  }).$mount()
+    }).$mount()
 
-  expect(slots!.default!({ msg: 'hi' })).toMatchObject([
-    {
-      type: Text,
-      children: 'hi'
-    }
-  ])
+    expect(slots!.default!({ msg: 'hi' })).toMatchObject([
+      {
+        type: Text,
+        children: 'hi'
+      }
+    ])
 
-  expect(
-    deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message
-  ).toHaveBeenWarned()
+    expect(
+      deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message
+    ).toHaveBeenWarned()
+  })
+
+  test('should not include legacy slot usage in $scopedSlots', () => {
+    let normalSlots: Slots
+    let scopedSlots: Slots
+    new Vue({
+      template: `<child><div>default</div></child>`,
+      components: {
+        child: {
+          compatConfig: { RENDER_FUNCTION: false },
+          render() {
+            normalSlots = this.$slots
+            scopedSlots = this.$scopedSlots
+          }
+        }
+      }
+    }).$mount()
+
+    expect('default' in normalSlots!).toBe(true)
+    expect('default' in scopedSlots!).toBe(false)
+
+    expect(
+      deprecationData[DeprecationTypes.INSTANCE_SCOPED_SLOTS].message
+    ).toHaveBeenWarned()
+  })
 })
 
 test('INSTANCE_ATTR_CLASS_STYLE', () => {

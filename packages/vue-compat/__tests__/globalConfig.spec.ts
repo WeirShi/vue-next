@@ -1,5 +1,7 @@
 import Vue from '@vue/compat'
-import { toggleDeprecationWarning } from '../compatConfig'
+import { toggleDeprecationWarning } from '../../runtime-core/src/compat/compatConfig'
+import { createApp } from '../src/esm-index'
+import { triggerEvent } from './utils'
 
 beforeEach(() => {
   toggleDeprecationWarning(false)
@@ -10,18 +12,6 @@ afterEach(() => {
   Vue.configureCompat({ MODE: 3 })
   toggleDeprecationWarning(false)
 })
-
-function triggerEvent(
-  target: Element,
-  event: string,
-  process?: (e: any) => any
-) {
-  const e = document.createEvent('HTMLEvents')
-  e.initEvent(event, true, true)
-  if (process) process(e)
-  target.dispatchEvent(e)
-  return e
-}
 
 // only testing config options that affect runtime behavior.
 
@@ -73,5 +63,14 @@ test('GLOBAL_IGNORED_ELEMENTS', () => {
     el,
     template: `<v-foo/><foo/>`
   })
+  expect(el.innerHTML).toBe(`<v-foo></v-foo><foo></foo>`)
+})
+
+test('singleton config should affect apps created with createApp()', () => {
+  Vue.config.ignoredElements = [/^v-/, 'foo']
+  const el = document.createElement('div')
+  createApp({
+    template: `<v-foo/><foo/>`
+  }).mount(el)
   expect(el.innerHTML).toBe(`<v-foo></v-foo><foo></foo>`)
 })

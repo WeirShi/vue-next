@@ -1,5 +1,6 @@
-import { extend, hasOwn, isArray } from '@vue/shared'
+import { extend, hasOwn, isArray, isFunction } from '@vue/shared'
 import {
+  Component,
   ComponentInternalInstance,
   ComponentOptions,
   formatComponentName,
@@ -96,7 +97,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   [DeprecationTypes.GLOBAL_PROTOTYPE]: {
     message:
       `Vue.prototype is no longer available in Vue 3. ` +
-      `Use config.globalProperties instead.`,
+      `Use app.config.globalProperties instead.`,
     link: `https://v3.vuejs.org/guide/migration/global-api.html#vue-prototype-replaced-by-config-globalproperties`
   },
 
@@ -505,7 +506,7 @@ export function warnDeprecation(
 export type CompatConfig = Partial<
   Record<DeprecationTypes, boolean | 'suppress-warning'>
 > & {
-  MODE?: 2 | 3
+  MODE?: 2 | 3 | ((comp: Component | null) => 2 | 3)
 }
 
 export const globalCompatConfig: CompatConfig = {
@@ -566,15 +567,21 @@ export function getCompatConfigForKey(
 
 export function isCompatEnabled(
   key: DeprecationTypes,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
+  enableForBuiltIn = false
 ): boolean {
   // skip compat for built-in components
-  if (instance && instance.type.__isBuiltIn) {
+  if (!enableForBuiltIn && instance && instance.type.__isBuiltIn) {
     return false
   }
 
-  const mode = getCompatConfigForKey('MODE', instance) || 2
+  const rawMode = getCompatConfigForKey('MODE', instance) || 2
   const val = getCompatConfigForKey(key, instance)
+
+  const mode = isFunction(rawMode)
+    ? rawMode(instance && instance.type)
+    : rawMode
+
   if (mode === 2) {
     return val !== false
   } else {
