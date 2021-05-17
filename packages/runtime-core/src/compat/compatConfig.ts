@@ -26,6 +26,7 @@ export const enum DeprecationTypes {
   CONFIG_PRODUCTION_TIP = 'CONFIG_PRODUCTION_TIP',
   CONFIG_IGNORED_ELEMENTS = 'CONFIG_IGNORED_ELEMENTS',
   CONFIG_WHITESPACE = 'CONFIG_WHITESPACE',
+  CONFIG_OPTION_MERGE_STRATS = 'CONFIG_OPTION_MERGE_STRATS',
 
   INSTANCE_SET = 'INSTANCE_SET',
   INSTANCE_DELETE = 'INSTANCE_DELETE',
@@ -50,7 +51,7 @@ export const enum DeprecationTypes {
   CUSTOM_DIR = 'CUSTOM_DIR',
 
   ATTR_FALSE_VALUE = 'ATTR_FALSE_VALUE',
-  ATTR_ENUMERATED_COERSION = 'ATTR_ENUMERATED_COERSION',
+  ATTR_ENUMERATED_COERCION = 'ATTR_ENUMERATED_COERCION',
 
   TRANSITION_CLASSES = 'TRANSITION_CLASSES',
   TRANSITION_GROUP_ROOT = 'TRANSITION_GROUP_ROOT',
@@ -172,6 +173,12 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `Vue 3 compiler's whitespace option will default to "condense" instead of ` +
       `"preserve". To suppress this warning, provide an explicit value for ` +
       `\`config.compilerOptions.whitespace\`.`
+  },
+
+  [DeprecationTypes.CONFIG_OPTION_MERGE_STRATS]: {
+    message:
+      `config.optionMergeStrategies no longer exposes internal strategies. ` +
+      `Use custom merge functions instead.`
   },
 
   [DeprecationTypes.INSTANCE_SET]: {
@@ -316,7 +323,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
     link: `https://v3.vuejs.org/guide/migration/attribute-coercion.html`
   },
 
-  [DeprecationTypes.ATTR_ENUMERATED_COERSION]: {
+  [DeprecationTypes.ATTR_ENUMERATED_COERCION]: {
     message: (name: string, value: any, coerced: string) =>
       `Enumerated attribute "${name}" with v-bind value \`${value}\` will ` +
       `${
@@ -326,7 +333,7 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
       `If the usage is intended, ` +
       `you can disable the compat behavior and suppress this warning with:` +
       `\n\n  configureCompat({ ${
-        DeprecationTypes.ATTR_ENUMERATED_COERSION
+        DeprecationTypes.ATTR_ENUMERATED_COERCION
       }: false })\n`,
     link: `https://v3.vuejs.org/guide/migration/attribute-coercion.html`
   },
@@ -539,7 +546,7 @@ export function validateCompatConfig(config: CompatConfig) {
       if (key.startsWith('COMPILER_')) {
         if (isRuntimeOnly()) {
           warn(
-            `Depreaction config "${key}" is compiler-specific and you are ` +
+            `Deprecation config "${key}" is compiler-specific and you are ` +
               `running a runtime-only build of Vue. This deprecation should be ` +
               `configured via compiler options in your build setup instead.`
             // TODO link to migration build docs on build setup
