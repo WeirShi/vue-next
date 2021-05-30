@@ -1301,7 +1301,8 @@ function baseCreateRenderer(
   ) => {
     // 2.x compat may pre-creaate the component instance before actually
     // mounting
-    const compatMountInstance = __COMPAT__ && initialVNode.component
+    const compatMountInstance =
+      __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
     const instance: ComponentInternalInstance =
       compatMountInstance ||
       (initialVNode.component = createComponentInstance(
@@ -1462,7 +1463,7 @@ function baseCreateRenderer(
               // which means it won't track dependencies - but it's ok because
               // a server-rendered async wrapper is already in resolved state
               // and it will never need to change.
-              hydrateSubTree
+              () => !instance.isUnmounted && hydrateSubTree()
             )
           } else {
             hydrateSubTree()
